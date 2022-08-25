@@ -1,5 +1,6 @@
 package com.example.democonsumerkafka.consume;
 
+import com.example.democonsumerkafka.config.KafkaConfig;
 import com.example.democonsumerkafka.repository.GoodbyeRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,21 +31,19 @@ public class Consumer {
         this.sender = sender;
     }
 
-    @KafkaListener(topics = "bookRq", groupId = "foo", containerFactory = "kafkaListenerContainerFactory")
-    public void listen(ConsumerRecord<String, Object> record) throws InterruptedException {
+    @KafkaListener(topics = KafkaConfig.topicRq, groupId = "foo", containerFactory = "kafkaListenerContainerFactory")
+    public void listen(ConsumerRecord<String, Object> record) {
         AtomicInteger count = new AtomicInteger();
         String key = record.key();
         sender.send(goodbyeRepository.findAll().buffer().map(i -> {
-                    System.out.println(i);
                     try {
                         String s = objectMapper.writeValueAsString(i);
-                        return SenderRecord.create(new ProducerRecord<>("bookRs", key , s ), count.getAndIncrement());
+                        return SenderRecord.create(new ProducerRecord<>(KafkaConfig.topicRs, key , s ), count.getAndIncrement());
                     } catch (JsonProcessingException e) {
                         e.printStackTrace();
                     }
                     return null;
                 }))
-                .doOnError(Throwable::printStackTrace)
                 .subscribe();
     }
 }
